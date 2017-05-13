@@ -1,0 +1,30 @@
+{
+	"name":         "dana/shellconf",
+	"description" : "Shell-style config-file encoder/decoder",
+	"homepage":     "https://github.com/okdana/shellconf",
+	"license":      "MIT",
+
+	"require": {
+		"php": ">=7.0.0"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^6.1"
+	},
+
+	"autoload": {
+		"psr-4": {
+			"Dana\\ShellConf\\": "src"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Dana\\Test\\ShellConf\\": "tests"
+		}
+	},
+
+	"scripts": {
+		"test":    "vendor/bin/phpunit",
+		"phpunit": "vendor/bin/phpunit"
+	}
+}
+
