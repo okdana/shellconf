@@ -81,7 +81,7 @@ more widely used, projects:
 
 * [symfony/dotenv](https://github.com/symfony/dotenv)
 * [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv)
-* [josegonzalez](https://github.com/josegonzalez/php-dotenv)
+* [josegonzalez/php-dotenv](https://github.com/josegonzalez/php-dotenv)
 
 ## To do
 
