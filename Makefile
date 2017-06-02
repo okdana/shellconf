@@ -1,4 +1,4 @@
-# dana/bitap Makefile
+# dana/shellconf Makefile
 
 .SILENT:
 
