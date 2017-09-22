@@ -131,6 +131,26 @@ class ShellConfTest extends TestCase {
 			["FOO='bar\\baz'",   'FOO', 'bar\\baz'],
 			["FOO='bar\\\\baz'", 'FOO', 'bar\\\\baz'],
 
+			// Special character ';' and escaping
+			['FOO=bar;baz',     false, false],
+			['FOO=bar\\;baz',   'FOO', 'bar;baz'],
+			['FOO="bar;baz"',   'FOO', 'bar;baz'],
+			['FOO="bar\\;baz"', 'FOO', 'bar\\;baz'],
+			["FOO='bar;baz'",   'FOO', 'bar;baz'],
+			["FOO='bar\\;baz'", 'FOO', 'bar\\;baz'],
+
+			// Special character '#' and escaping
+			['FOO=bar#baz',      'FOO', 'bar#baz'],
+			['FOO=bar\\#baz',    'FOO', 'bar#baz'],
+			['FOO="bar#baz"',    'FOO', 'bar#baz'],
+			['FOO="bar\\#baz"',  'FOO', 'bar\\#baz'],
+			['FOO="bar #baz"',   'FOO', 'bar #baz'],
+			['FOO="bar \\#baz"', 'FOO', 'bar \\#baz'],
+			["FOO='bar#baz'",    'FOO', 'bar#baz'],
+			["FOO='bar\\#baz'",  'FOO', 'bar\\#baz'],
+			["FOO='bar #baz'",   'FOO', 'bar #baz'],
+			["FOO='bar \\#baz'", 'FOO', 'bar \\#baz'],
+
 			// Escape sequences
 			['FOO=bar\\nbaz',   'FOO', 'barnbaz'],
 			['FOO="bar\\nbaz"', 'FOO', 'bar\\nbaz'],
@@ -154,22 +174,42 @@ class ShellConfTest extends TestCase {
 			['FOO="bar" ;', 'FOO', 'bar'],
 			["FOO='bar';",  'FOO', 'bar'],
 			["FOO='bar' ;", 'FOO', 'bar'],
+			['FOO=bar;;',   false, false],
+			['FOO=bar ; ;', false, false],
 
 			// Trailing comments
-			['FOO=bar#baz',    'FOO', 'bar#baz'],
-			['FOO=bar #baz',   'FOO', 'bar'],
-			['FOO="bar"#baz',  false, false],
-			['FOO="bar" #baz', 'FOO', 'bar'],
-			["FOO='bar'#baz",  false, false],
-			["FOO='bar' #baz", 'FOO', 'bar'],
+			['FOO=bar#baz',      'FOO', 'bar#baz'],
+			['FOO=bar #baz',     'FOO', 'bar'],
+			['FOO=bar \\#baz',   false, false],
+			['FOO="bar"#baz',    false, false],
+			['FOO="bar" #baz',   'FOO', 'bar'],
+			['FOO="bar" \\#baz', false, false],
+			["FOO='bar'#baz",    false, false],
+			["FOO='bar' #baz",   'FOO', 'bar'],
+			["FOO='bar' \\#baz", false, false],
 
 			// Trailing semi-colons and comments
+			['FOO=bar;#baz',     'FOO', 'bar'],
 			['FOO=bar; #baz',    'FOO', 'bar'],
 			['FOO=bar ; #baz',   'FOO', 'bar'],
+			['FOO="bar";#baz',   'FOO', 'bar'],
 			['FOO="bar"; #baz',  'FOO', 'bar'],
 			['FOO="bar" ; #baz', 'FOO', 'bar'],
+			["FOO='bar';#baz",   'FOO', 'bar'],
 			["FOO='bar'; #baz",  'FOO', 'bar'],
 			["FOO='bar' ; #baz", 'FOO', 'bar'],
+
+			// White space
+			[' FOO=bar',          'FOO', 'bar'],
+			["\tFOO=bar",         'FOO', 'bar'],
+			['FOO=bar ',          'FOO', 'bar'],
+			["FOO=bar\t",         'FOO', 'bar'],
+			['FOO=bar\\ baz',     'FOO', 'bar baz'],
+			['FOO=\\ bar\\ baz',  'FOO', ' bar baz'],
+			['FOO=bar\\ baz\\ ',  'FOO', 'bar baz '],
+			["FOO=\"bar baz\"\t", 'FOO', 'bar baz'],
+			['FOO="bar baz" ',    'FOO', 'bar baz'],
+			["FOO='bar baz'\t",   'FOO', 'bar baz'],
 
 			// Key-word prefixes
 			// (n.b. we can't test `local` quite properly because bash only
@@ -180,6 +220,9 @@ class ShellConfTest extends TestCase {
 			['export  FOO=bar', 'FOO', 'bar'],
 
 			// Legal variable names
+			['foo=bar',   'foo',   'bar'],
+			['Foo=bar',   'Foo',   'bar'],
+			['fOO=bar',   'fOO',   'bar'],
 			['FOO1=bar',  'FOO1',  'bar'],
 			['FOO_=bar',  'FOO_',  'bar'],
 			['_FOO=bar',  '_FOO',  'bar'],
