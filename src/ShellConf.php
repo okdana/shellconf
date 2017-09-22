@@ -11,7 +11,7 @@ namespace Dana\ShellConf;
 
 class ShellConf {
 	/**
-	 * @var string[] Characters we require to be escaped in double-quoted values.
+	 * @var string[] Characters required to be escaped in double-quoted values.
 	 *
 	 * @see ShellConf::parseLine()
 	 * @see POSIX.1-2008 XCU 2.2
@@ -24,7 +24,7 @@ class ShellConf {
 	];
 
 	/**
-	 * @var string[] Characters we require to be escaped in unquoted values.
+	 * @var string[] Characters required to be escaped in unquoted values.
 	 *
 	 * @see ShellConf::parseLine()
 	 * @see POSIX.1-2008 XCU 2.2
@@ -131,7 +131,7 @@ class ShellConf {
 		}
 
 		preg_match(
-			'/^\s*?(?:(?:declare|export|local)\s+?)?(\S+?)=(.*?)(?:\s*?;)?(\s*?|\s+?\#.*)?$/',
+			'/^\s*?(?:(?:declare|export|local)\s+?)?(\S+?)=(.*)\s*$/',
 			$line,
 			$matches
 		);
@@ -159,27 +159,74 @@ class ShellConf {
 			return [$name, ''];
 		}
 
+		$chars    = preg_split('//u', $value, -1, \PREG_SPLIT_NO_EMPTY);
+		$charsLen = count($chars);
+
 		// Quoted value
-		if ( $value[0] === '"' || $value[0] === "'" ) {
-			$startQuote = $value[0];
-			$endQuote   = substr($value, -1);
-			$value      = substr($value, 1, -1);
+		if ( $chars[0] === '"' || $chars[0] === "'" ) {
+			$quote = $chars[0];
+			$end   = -1;
+
+			// Scan for end of value
+			for ( $i = 1; $i < $charsLen; $i++ ) {
+				if ( $chars[$i] === '\\' ) {
+					$i++;
+					continue;
+				} elseif ( $chars[$i] === $quote ) {
+					$end = $i - 1;
+					break;
+				}
+			}
+
+			$after = implode('', array_slice($chars, $end + 2));
+
 		// Unquoted value
 		} else {
-			$startQuote = null;
-			$endQuote   = null;
+			$quote = null;
+			$end   = -1;
+
+			// Scan for end of value
+			for ( $i = 0; $i < $charsLen; $i++ ) {
+				if ( $chars[$i] === '\\' ) {
+					$i++;
+				} elseif ( in_array($chars[$i], static::UNQUOTED_MUST_ESCAPE, true) ) {
+					$end = $i - 1;
+					break;
+				}
+
+				$end = $i;
+			}
+
+			$after = implode('', array_slice($chars, $end + 1));
+
+			// Illegal line continuation
+			if ( $end >= $charsLen ) {
+				$end = -1;
+			}
 		}
 
-		// Quotes should be balanced
-		if ( $startQuote !== $endQuote ) {
+		// End not found
+		if ( $end < 0 ) {
 			throw new \UnexpectedValueException(sprintf(
-				'Quote mismatch on line: %s',
+				'End of value not found on line: %s',
 				$line
 			));
 		}
 
+		// Garbage found after end
+		if ( $after !== '' && ! preg_match('/^(?:\s*;(?:\s*#.*)?|\s+#.*)?\s*$/', $after) ) {
+			throw new \UnexpectedValueException(sprintf(
+				'Garbage found after value on line: %s',
+				$line
+			));
+		}
+
+		$chars = array_slice($chars, $quote ? 1 : 0, $end + ($quote ? 0 : 1));
+
 		// Single-quoted value — easy because everything is literal
-		if ( $startQuote === "'" ) {
+		if ( $quote === "'" ) {
+			$value = implode('', $chars);
+
 			// The value must not contain single-quotes though
 			if ( strpos($value, "'") !== false ) {
 				throw new \UnexpectedValueException(sprintf(
@@ -201,7 +248,7 @@ class ShellConf {
 		$newValue = '';
 		$escape   = false;
 
-		foreach ( preg_split('//u', $value, -1, \PREG_SPLIT_NO_EMPTY) as $c ) {
+		foreach ( $chars as $c ) {
 			// Back-slash — start escape
 			if ( ! $escape && $c === '\\' ) {
 				$escape = true;
@@ -216,7 +263,7 @@ class ShellConf {
 			// special characters, notably $, to go unescaped if it can deduce
 			// that the following character isn't going to trigger expansion;
 			// we're going to make it simple here and just be strict about it
-			if ( $startQuote === '"' && in_array($c, static::DOUBLE_QUOTED_MUST_ESCAPE, true) ) {
+			if ( $quote === '"' && in_array($c, static::DOUBLE_QUOTED_MUST_ESCAPE, true) ) {
 				if ( ! $escape ) {
 					throw new \UnexpectedValueException(sprintf(
 						'Unescaped special character in double-quoted value on line: %s',
@@ -230,8 +277,9 @@ class ShellConf {
 			}
 
 			// Unquoted values have some additional characters that need
-			// escaped; otherwise our rational is the same as above
-			if ( $startQuote === null && in_array($c, static::UNQUOTED_MUST_ESCAPE, true) ) {
+			// escaped; otherwise our rationale is the same as above
+			if ( $quote === null && in_array($c, static::UNQUOTED_MUST_ESCAPE, true) ) {
+				// This should never happen — our scan above would have blown up
 				if ( ! $escape ) {
 					throw new \UnexpectedValueException(sprintf(
 						'Unescaped special character in unquoted value on line: %s',
@@ -247,7 +295,7 @@ class ShellConf {
 			// Escaped non-special character
 			if ( $escape ) {
 				// Treat back-slash literally if double-quoted
-				if ( $startQuote === '"' ) {
+				if ( $quote === '"' ) {
 					$newValue .= '\\' . $c;
 				// Strip it out back-slash if unquoted
 				} else {
@@ -459,7 +507,7 @@ class ShellConf {
 		if ( $name === '_' ) {
 			return false;
 		}
-		return (bool) preg_match('/^[_A-Z][A-Za-z0-9_]*$/', $name);
+		return (bool) preg_match('/^[_A-Za-z][A-Za-z0-9_]*$/', $name);
 	}
 
 	/**
@@ -527,4 +575,3 @@ class ShellConf {
 		return implode("\n", $lines);
 	}
 }
-
