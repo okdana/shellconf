@@ -1,0 +1,30 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * This file is part of \Dana\ShellConf.
+ *
+ * @copyright © dana <https://github.com/okdana>
+ * @license   MIT
+ */
+
+require_once __DIR__ . '/../src/ShellConf.php';
+
+use Dana\ShellConf\ShellConf;
+
+if ( $argc < 2 ) {
+	fprintf(\STDERR, "usage: %s <key>=<value> ...\n", basename($argv[0]));
+	exit(1);
+}
+
+foreach ( array_slice($argv, 1) as $arg ) {
+	$res = (new ShellConf())->parseLine($arg);
+
+	if ( empty($res) ) {
+		continue;
+	}
+
+	echo json_encode($res), "\n";
+}
+
+exit(0);
