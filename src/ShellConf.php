@@ -457,7 +457,7 @@ class ShellConf {
 	 * @return self
 	 */
 	public function get($name, $default = null) {
-		return $this->data ?? $default;
+		return $this->data[$name] ?? $default;
 	}
 
 	/**
